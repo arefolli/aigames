@@ -247,7 +247,7 @@ class FullGP:
       incorso=False
       tempo=tempo+1
       for rr in ordine :
-        if ! stato[rr][0] : continue
+        if not stato[rr][0] : continue
         incorso = True
         lancio=[]        
         for cc in scia[1]:
@@ -295,7 +295,7 @@ class FullGP:
         else :
           raccolta[stato[rr][2]]=raccolta.get(stato[rr][2],0) +1
       for rr in ordine :
-        if ! stato[rr][0] : continue
+        if not stato[rr][0] : continue
         datipista=self.autodromi.vistasemplice(autodromename,stato[rr][2])
         inputs=inputs=[marcia,gomme,benzina] + datipista + taglio(raccolta,stato[rr][2])
         output=self.ecosistema.getplayer(rr).valuta(inputs)
@@ -326,7 +326,7 @@ class FullGP:
 if ( __name__ == '__main__' ):
   logger=logging.getLogger('refo')
   configurazione={'sussistenza' : 30 , 'genlen' : 150 , 'gennum' : 100 ,  'sonnumber' : 20 , 'repname' : 'gp.txt', 'gare' : 2 , 'create' : False, 'midlayer' : False, 'funzioni' : ['step','step','tanh'],'verbose' : False }
-  options , remainder = getopt.getopt(sys.argv[1:],'ht:vmc',['plist=','min=','verbose','max='])
+  options , remainder = getopt.getopt(sys.argv[1:],'ht:vmcl:n:s:',['verbose'])
   for opt,args in options:
     if opt in ('-v','--verbose'):
       configurazione['verbose']=True
@@ -340,6 +340,12 @@ if ( __name__ == '__main__' ):
         configurazione['funzioni']= ['tanh','minstep','tanh']
     elif opt in ('-m'):
       configurazione['midlayer']= True
+    elif opt in ('-l'):
+      configurazione['genlen']= int(args)
+    elif opt in ('-n'):
+      configurazione['gennum']= int(args)
+    elif opt in ('-s'):
+      configurazione['sussistenza']= int(args)
     elif opt in ('-c'):
       configurazione['create']= True
   if configurazione['verbose'] :
@@ -359,3 +365,4 @@ if ( __name__ == '__main__' ):
   delta=datetime.today() - nowis
   logger.info("Done in %s" % str(delta))  
   logger.info("STOP")
+
