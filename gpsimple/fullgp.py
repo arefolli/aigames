@@ -84,14 +84,17 @@ class Autodromi:
 class FullGP:
   def __init__(self,parameters):
     self.liblogger=logging.getLogger('refo')
-    self.ecosistema=Ecosystem(11,2) 
+    self.ecosistema=Ecosystem(18,2) 
     self.parameters=parameters
     self.report=Reportistica(parameters['repname'])
     self.autodromi=Autodromi()
     self.controllo=open("verifica.csv","w")
     self.semifinalrule={12 : [[6,6],3] , 13 : [[6,7],3], 14 : [[7,7],3] , 15 : [[7,8],3], 16 : [[8,8],3], 17 : [[8,9],3],
                         18 : [[6,6,6],2], 19: [[6,6,7],2], 20 : [[6,7,7],2], 21 : [[7,7,7],2], 22 : [[7,7,8],2], 23 :[[7,8,8],2],
-                        24 : [[8,8,8],2] }
+                        24 : [[8,8,8],2] , 25: [[9,8,8],2], 26: [[9,9,8],2], 27 : [[9,9,9],2] , 28 : [[10,9,9],2] , 29 : [[10,10,9],2] , 30: [[10,10,10],2] ,
+                        31 : [[8,8,8,7],2] , 32 : [[8,8,8,8],2] , 33 : [[9,8,8,8],2] , 34 : [[9,9,8,8],2], 35 : [[9,9,9,8],2], 36 : [[9,9,9,9],2], 37 : [[10,9,9,9],2],
+                        38 : [[10,10,9,9],2], 39 : [[10,10,10,9],2], 40 : [[10,10,10,10],2], 41 : [[9,8,8,8,8],2] , 42 : [[9,9,8,8,8],2] , 43 : [[9,9,9,8,8],2],
+                        44 : [[9,9,9,9,8],2], 45 : [[9,9,9,9,9],2], 46 : [[10,9,9,9,9],2] , 47 : [[10,10,9,9,9],2] , 48 : [[10,10,10,9,9],2] , 49 : [[10,10,10,10,9],2] , 50 : [[10,10,10,10,10],2]}
 
   def lanciodadi(self,numb):
     toret=[]
@@ -99,6 +102,17 @@ class FullGP:
     for rr in range(numb):
       toret.append(random.choice(faccie))
     return toret[:]
+
+  def sistemalancio(self,lista):
+    toret=[]
+    faccie=['50','50','50','50','R','V']
+    for rr in lista:
+      if rr == '50':
+        toret.append('50')
+      else:
+        toret.append(random.choice(faccie))
+    return toret[:]
+
     
   def runtest(self):
     self.liblogger.info("start mock test")
@@ -198,7 +212,7 @@ class FullGP:
   def valutazione(self,autodromename):
     self.liblogger.debug("start gara su autodromo %s di lunghezza %d " % (autodromename,self.autodromi.lunghezza(autodromename)))
     risultato={}
-    listaplayers=self.ecosistema.getactiveplayers()
+    listaplayers=list(self.ecosistema.getactiveplayers())
     random.shuffle(listaplayers)
     for cc in listaplayers:
       risultato[cc]=0
@@ -215,9 +229,11 @@ class FullGP:
       while dd > 0 :
         semifinale.append(listaplayers.pop(0))
         dd=dd - 1
-      semiresult=self.garavera(semifinale,autodromename)
+      for cc in self.garavera(semifinale,autodromename):
+        partialresult[cc[0]]=cc[1]
+      ordine=sorted(partialresult.keys(), key=lambda x : partialresult[x], reverse = True)
       for rr in range(0,semifinalrule[1]):
-        finale.append(semiresult[rr][0])
+        finale.append(ordine[rr])
     fullresult=self.garavera(finale,autodromename)
     for aa in fullresult:
       risultato[aa[0]]=aa[1]
@@ -225,7 +241,8 @@ class FullGP:
 
   def garavera(self,partenti,autodromename):
     tempo=0
-    lunghezza=self.autodromi.lunghezza(adname)
+    self.liblogger.debug(f"Partenza {"-".join(partenti)}" )
+    lunghezza=self.autodromi.lunghezza(autodromename)
     quanti=len(partenti)
     stato={}
     posizione=0
@@ -243,6 +260,7 @@ class FullGP:
     incorso=True
     while incorso:
       ordine=sorted(partenti,key = lambda x : (stato[x][1] * 1000 + stato[x][2]), reverse = True)
+      self.liblogger.debug(f"A {tempo:5} ordine {"-".join(ordine)}" )
       scia=[]  # [posizione, marcia , lancio]
       incorso=False
       tempo=tempo+1
@@ -250,10 +268,11 @@ class FullGP:
         if not stato[rr][0] : continue
         incorso = True
         lancio=[]        
-        for cc in scia[1]:
+        for cc in scia:
           if cc[0] == (stato[rr][2] + 1 ) :
             if cc[1] == stato[rr][5] :
               lancio=self.sistemalancio(cc[2])
+              break
         if len(lancio) < 1 :
           lancio=self.lanciodadi(stato[rr][5])
         scia.append([stato[rr][2],stato[rr][5],lancio[:]])
@@ -292,12 +311,13 @@ class FullGP:
         if ( stato[rr][3] < 1 ) or (stato[rr][4] < 1 ) or (stato[rr][1] > 2 ):
           stato[rr][0]=False
           stato[rr][7]=1500 * stato[rr][1] + 10 * stato[rr][2] - tempo
+          self.liblogger.debug(f"{rr} is out at {tempo} con benzina {stato[rr][3]} , gomme {stato[rr][4]} e giri {stato[rr][1]}")
         else :
           raccolta[stato[rr][2]]=raccolta.get(stato[rr][2],0) +1
       for rr in ordine :
         if not stato[rr][0] : continue
         datipista=self.autodromi.vistasemplice(autodromename,stato[rr][2])
-        inputs=inputs=[marcia,gomme,benzina] + datipista + taglio(raccolta,stato[rr][2])
+        inputs=inputs=[stato[rr][5],stato[rr][4],stato[rr][3]] + datipista + taglio(raccolta,stato[rr][2])
         output=self.ecosistema.getplayer(rr).valuta(inputs)
         if output[0] > 0 :
           stato[rr][6] = True
@@ -318,6 +338,7 @@ class FullGP:
     toret=[]
     for aa in partenti:
       toret.append([aa,stato[aa][7]])
+    return toret[:]
           
 
 
@@ -325,7 +346,7 @@ class FullGP:
 
 if ( __name__ == '__main__' ):
   logger=logging.getLogger('refo')
-  configurazione={'sussistenza' : 30 , 'genlen' : 150 , 'gennum' : 100 ,  'sonnumber' : 20 , 'repname' : 'gp.txt', 'gare' : 2 , 'create' : False, 'midlayer' : False, 'funzioni' : ['step','step','tanh'],'verbose' : False }
+  configurazione={'sussistenza' : 20 , 'genlen' : 150 , 'gennum' : 100 ,  'sonnumber' : 20 , 'repname' : 'gp.txt', 'gare' : 2 , 'create' : False, 'midlayer' : False, 'funzioni' : ['step','step','tanh'],'verbose' : False }
   options , remainder = getopt.getopt(sys.argv[1:],'ht:vmcl:n:s:',['verbose'])
   for opt,args in options:
     if opt in ('-v','--verbose'):
