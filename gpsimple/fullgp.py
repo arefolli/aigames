@@ -264,7 +264,7 @@ class FullGP:
     incorso=True
     while incorso:
       ordine=sorted(partenti,key = lambda x : (stato[x][1] * 1000 + stato[x][2]), reverse = True)
-      self.liblogger.debug(f"A {tempo:5} ordine {"-".join(ordine)}" )
+      #self.liblogger.debug(f"A {tempo:5} ordine {"-".join(ordine)}" )
       scia=[]  # [posizione, marcia , lancio]
       incorso=False
       tempo=tempo+1
@@ -316,6 +316,8 @@ class FullGP:
           stato[rr][0]=False
           stato[rr][7]=1500 * stato[rr][1] + 10 * stato[rr][2] - tempo
           self.liblogger.debug(f"{rr} is out at {tempo} con benzina {stato[rr][3]} , gomme {stato[rr][4]} e giri {stato[rr][1]}")
+          if stato[rr][1] > 2 :
+            self.autodromi.checkrecord(autodromename,rr,tempo)
         else :
           raccolta[stato[rr][2]]=raccolta.get(stato[rr][2],0) +1
       for rr in ordine :
