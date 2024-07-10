@@ -66,6 +66,8 @@ class Autodromi:
 
   def vistasemplice(self,name,pos):
     lunga=self.inventario[name]+self.inventario[name]
+    if pos < 0 :
+        pos = pos + len(self.inventario[name])
     fino=pos+8
     toret=lunga[pos:fino]
     return toret
@@ -226,6 +228,7 @@ class FullGP:
     for cc in semifinalrule[0]:
       dd=cc
       semifinale=[]
+      partialresult={}
       while dd > 0 :
         semifinale.append(listaplayers.pop(0))
         dd=dd - 1
@@ -234,6 +237,7 @@ class FullGP:
       ordine=sorted(partialresult.keys(), key=lambda x : partialresult[x], reverse = True)
       for rr in range(0,semifinalrule[1]):
         finale.append(ordine[rr])
+    random.shuffle(finale)
     fullresult=self.garavera(finale,autodromename)
     for aa in fullresult:
       risultato[aa[0]]=aa[1]
