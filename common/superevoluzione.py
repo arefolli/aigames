@@ -237,7 +237,7 @@ class Reportistica:
     self.report.write("\n %s ha vissuto %d cicli, con una media di %3.2f \n" % (id,len(self.perfmanager['players'][id]['punteggi']), statistics.mean(self.perfmanager['players'][id]['punteggi'])))
 
 
-class Ecosystem:
+class OldEcosystem:
   def __init__(self,front,lastline,tipoplayer='Standard'):
     self.liblogger=logging.getLogger('refo')
     self.manager=ConnectionManager()
@@ -570,3 +570,228 @@ class Ecosystem:
     tocreate['base']=[inmezzo,order2eval[:],idplayer,self.tipo]
     self.players[idplayer]=Player(idplayer,self.front,self.lastline,self.manager,tocreate.copy())
 
+
+class EvoPlayer:
+  def __init__(self,nome,front,lastline,tipoplayer='Standard'):
+    self.front=front
+    self.itsme=nome
+    self.lastline=lastline
+    self.layers=[]
+    self.storia=''
+
+  def generate(self,midlayer):
+    self.storia="new"
+    if midlayer:
+      layerincrease=[10,12,15,15,12,10]
+    else:
+      layerincrease=[10,12,10]
+    self.layernum=[self.front]
+    actual=self.front
+    for rr in layerincrease:
+      actual=actual + rr
+      self.layers.append(np.zeros((self.layernum[-1],rr)))
+      self.layernum.append(actual)
+    self.layers.append(np.zeros((actual,self.lastline)))
+    ''' per tutti i layer calcolo il numero di celle e ne calcolo un quinto 
+        poi inizializzo quel numero di caselle al massimo'''
+    for rr in range(0,len(self.layers)):
+      righe,colonne=self.layers[rr].shape
+      to_modify=int(righe*colonne/4)
+      for ncel in range(0,to_modify):
+        riga=random.choice(range(0,righe))
+        colonna=random.choice(range(0,colonne))
+        if self.layers[rr][riga,colonna] == 0 :
+          self.layers[rr][riga,colonna] = random.uniform(-2.0,2.0)
+    ''' devo aggiungere i bias, lo aggiungo come una riga all'inizio della matrice '''
+    for rr in range(0,len(self.layers)):
+      righe,colonne=self.layers[rr].shape
+      pbase=[]
+      for ncel in range(0,colonne):
+        pbase.append(random.uniform(-5.0,5.0))
+      self.layers[rr]=np.vstack([pbase,self.layers[rr]])
+
+  def fromparents(self,padre,madre):
+    self.storia="%s + %s" % (padre.itsme,madre.itsme)
+    self.layernum=[]
+    players=len(padre.layers)
+    mlayers=len(madre.layers)
+    if players > mlayers:
+      nlayers=players
+    else:
+      nlayers=mlayers
+    for aa in range(0,nlayers):
+      prighe,pcolonne=padre.layers[aa].shape   #qui ci vorranno i try, e magari una buona idea per intercettare casi con numo di layer differenti
+      mrighe,mcolonne=madre.layers[aa].shape
+      self.layers.append(np.zeros((max(prighe,mrighe),max(pcolonne,mcolonne))))
+      self.layernum.append(max(prighe,mrighe))
+      for cc in range(0,max(pcolonne,mcolonne)):
+        for dd in range(0,max(prighe,mrighe)):
+          if dd >= prighe :
+            self.layers[aa][cc,dd]=madre.layers[aa][cc,dd]
+          elif dd >= mrighe:
+            self.layers[aa][cc,dd]=padre.layers[aa][cc,dd]
+          elif cc >= pcolonne :
+            self.layers[aa][cc,dd]=madre.layers[aa][cc,dd]
+          elif cc >=mcolonne:             
+            self.layers[aa][cc,dd]=madre.layers[aa][cc,dd]
+          else:
+            if padre.layers[aa][cc,dd] != 0.0 :
+              if madre.layers[aa][cc,dd] != 0.0 :
+                self.layers[aa][cc,dd]=random.choice([padre.layers[aa][cc,dd],madre.layers[aa][cc,dd]])
+              else:
+                self.layers[aa][cc,dd]=padre.layers[aa][cc,dd]
+            else:
+              if madre.layers[aa][cc,dd] != 0.0 :
+                self.layers[aa][cc,dd]=madre.layers[aa][cc,dd]
+      
+        
+
+
+
+
+  def valuta(self,inputs):
+    vettore=np.array(inputs)
+    for rr in range(0,len(self.layers)):
+      inputv=np.hstack((np.array(1),vettore))
+      output=np.tanh(np.dot(inputv,self.layers[rr]))
+      vettore=np.hstack((vettore,output))
+    return output.tolist()
+
+  def radioterapy(self):
+    dove=random.choice(range(0,len(self.layers)-1))
+    righe,colonne=self.layers[dove].shape
+    daaggiungere=np.array([0.001]*righe)
+    daaggiungere=daaggiungere[:, np.newaxis]
+    self.layers[dove]=np.hstack([self.layers[dove],daaggiungere])
+    self.layernum[dove]=self.layernum[dove]+1
+    dove=dove+1
+    while dove < len(self.layers):
+      ra,ca=layers[dove].shape
+      daaggiungere=np.array([0.0001]*ca)
+      daaggiungere=daaggiungere[:, np.newaxis].transpose()
+      layers[dove]=np.vstack([layers[dove][0:colonne,:],daaggiungere,layers[dove][colonne:,:]])
+      self.layernum[dove]=self.layernum[dove]+1
+    
+
+  def getlayers(self):
+    return self.layers[:]
+
+  def getlayernum(self):
+    return self.layernum[:]
+
+  def getstoria(self):
+    return self.storia
+      
+  def copyfrom(self,sorgente):
+    self.layernum=sorgente.getlayernum()
+    self.layers=sorgente.getlayers()
+    self.storia=sorgente.getstoria() + " => %s" % self.itsme    
+      
+  def runmutations(self,mute_rate,flip_rate):
+    for cc in range(0,len(self.layers)):
+      if (random.uniform(0.0,1.0) < mute_rate) :
+        righe, colonne = self.layers[cc].shape
+        riga=random.choice(range(0,righe))
+        colonna=random.choice(range(0,colonne))
+        if self.layers[cc][riga,colonna] != 0 :
+          self.layers[cc][riga,colonna] =  self.layers[cc][riga,colonna] * ( 9.0/10.0 + random.uniform(0.0,0.2))
+        else:
+          self.layers[cc][riga,colonna] =  random.uniform(-0.5,0.5)
+      if (random.uniform(0.0,1.0) < flip_rate):        
+        righe, colonne = self.layers[cc].shape
+        riga=random.choice(range(0,righe))
+        colonna=random.choice(range(0,colonne))
+        self.layers[cc][riga,colonna] =  -1.0 * self.layers[cc][riga,colonna] 
+
+class Ecosystem:
+  def __init__(self,front,lastline,tipoplayer='Standard'):
+    self.liblogger=logging.getLogger('refo')
+    self.front=front
+    self.lastline=lastline
+    self.players={}
+    self.tipo=tipoplayer
+    self.ratemutation=[0.3,0.3,0.01,0.01,0.1,0.1]
+    self.generationnumber=0
+    self.idnumber={}
+    self.idnumber[0]=0
+
+  def getgeneration(self,name):
+    val=re.search('g(.+)f.*',name)
+    return int(val[1])
+
+
+  def newgeneration(self):
+    self.generationnumber=self.generationnumber+1
+    self.idnumber[self.generationnumber]=0
+
+  def createplayers(self,number,midlayer,funzioni):
+    for nn in range(0,number):
+      self.idnumber[self.generationnumber]=self.idnumber[self.generationnumber]+1
+      nome="g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber])
+      self.players[nome]=EvoPlayer(nome,self.front,self.lastline,self.tipo)
+      self.players[nome].generate(midlayer)
+      self.liblogger.debug("creato Player g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber]))
+
+  def runmutations(self,number):
+    for cc in range(0,number):
+      sc=random.choice(list(self.players.keys()))
+      genum=self.getgeneration(sc)
+      self.idnumber[genum]=self.idnumber[genum]+1
+      self.createclone(sc,'g%df%d' % (genum,self.idnumber[genum]))
+      self.players['g%df%d' % (genum,self.idnumber[genum]))].runmutations(self.ratemutation[0],self.ratemutation[3])
+
+  def runconnections(self,number):
+    if (random.uniform(0.0,10.0) < self.ratemutation[5]):
+      self.liblogger.warn("Nuovi layer non ancora implementato.. peccato")
+
+
+  def terminateplayer(self,id):
+    del self.players[id]
+
+  def popolazione(self):
+    return len(self.players.keys())
+
+  def getactiveplayers(self):
+    return self.players.keys()
+    
+  def getplayer(self,name):
+    return self.players[name]
+    
+  def createclone(self,fromid,toid):
+    self.players[toid]=EvoPlayer(self.front,self.lastline,self.tipo)
+    self.players[toid].copyfrom(self.players[fromid])
+
+
+  def radioterapy(self,metrica):
+    if (random.uniform(0.0,1.0) < self.ratemutation[4]):
+      pmutato=random.choice(list(self.players.keys()))
+      genum=self.getgeneration(pmutato)
+      self.idnumber[genum]=self.idnumber[genum]+1
+      self.createclone(pmutato,'g%df%d' % (genum,self.idnumber[genum]))
+      mutato='g%df%d' % (genum,self.idnumber[genum])
+      self.liblogger.debug("Player %s figlio di %s" % (mutato,pmutato))
+      self.liblogger.warning("aggiunta neurone per %s " % mutato )
+      self.players[mutato].radioterapy()
+    else:
+      self.liblogger.debug("no radioterapy "  )
+    raise Exception("yet not implemented")
+       
+       
+  def nuovofiglio(self):
+    padre=random.choice(list(self.players.keys()))
+    madre=random.choice(list(self.players.keys()))
+    if padre != madre :
+      self.idnumber[self.generationnumber]=self.idnumber[self.generationnumber] + 1
+      figlio="g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber])
+      self.liblogger.debug("possibile figlio %s da %s e %s" % (figlio,padre,madre))
+      self.players[figlio]=EvoPlayer(self.front,self.lastline,self.tipo)
+      self.players[figlio].fromparents(self.players[padre],self.players[madre])
+      self.liblogger.info("creato figlio %s da %s e %s" % (figlio,padre,madre))
+       
+    
+  def dumponfile(self,filename):
+    raise Exception("dump yet not implemented")
+
+  def createsingleplayer(self,immagine):
+    raise Exception("yet not implemented")
+  
