@@ -639,10 +639,12 @@ class RicoPlayer:
     return vettore[self.front:self.finoa].tolist()
 
   def radioterapy(self):   
-    righe=self.dimensione+1
+    righe=self.dimensione
     daaggiungere=np.array([0.001]*righe)
-    daaggiungere=daaggiungere[:, np.newaxis]
-    self.internalmatrix=np.hstack([self.internalmatrix,daaggiungere])
+    laterale=np.array([0.001]*(righe+2))
+    laterale=laterale[:, np.newaxis]
+    self.internalmatrix=np.vstack([self.internalmatrix,daaggiungere])
+    self.internalmatrix=np.hstack([self.internalmatrix,laterale])
     self.dimensione=self.dimensione+1
     
   def getstoria(self):
