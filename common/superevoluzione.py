@@ -571,6 +571,108 @@ class OldEcosystem:
     self.players[idplayer]=Player(idplayer,self.front,self.lastline,self.manager,tocreate.copy())
 
 
+
+
+class RicoPlayer:
+  def __init__(self,nome,front,lastline,tipoplayer='Standard'):
+    self.front=front
+    self.itsme=nome
+    self.lastline=lastline
+    self.finoa=front+lastline
+    self.storia=''
+    self.tipoplayer=tipoplayer
+    self.iterazioni={'Standard' : 5 , 'Super' : 10 }
+
+  def generate(self,midlayer):
+    self.storia="new"
+    if midlayer:
+      layerincrease=75
+    else:
+      layerincrease=32
+    self.dimensione=self.front+self.lastline+layerincrease
+    self.internalmatrix=np.zeros((self.dimensione,self.dimensione))
+    to_modify=int(self.dimensione*self.dimensione/8)
+    for ncel in range(0,to_modify):
+      riga=random.choice(range(0,self.dimensione))
+      colonna=random.choice(range(0,self.dimensione))
+      if self.internalmatrix[riga,colonna] == 0 :
+        self.internalmatrix[riga,colonna] = random.uniform(-2.0,2.0)
+    pbase=[]
+    for ncel in range(0,self.dimensione):
+      pbase.append(random.uniform(-5.0,5.0))
+    self.internalmatrix=np.vstack([pbase,self.internalmatrix])
+
+  def fromparents(self,padre,madre):
+    self.storia="%s + %s" % (padre.itsme,madre.itsme)
+    pdim=padre.dimensione
+    mdim=madre.dimensione
+    self.dimensione=max(pdim,mdim)
+    self.internalmatrix=np.zeros((self.dimensione+1,self.dimensione))
+    for cc in range(0,self.dimensione):
+      for rr in range(0,self.dimensione+1):
+        if rr > pdim :
+          self.internalmatrix[rr,cc]=madre.internalmatrix[rr,cc]
+        elif rr > mdim:
+          self.internalmatrix[rr,cc]=padre.internalmatrix[rr,cc]
+        elif cc > (pdim -1):
+          self.internalmatrix[rr,cc]=madre.internalmatrix[rr,cc]
+        elif cc > (mdim -1):
+          self.internalmatrix[rr,cc]=padre.internalmatrix[rr,cc]
+        else:
+          if madre.internalmatrix[rr,cc] != 0.0 :
+            if padre.internalmatrix[rr,cc] != 0.0 :
+              self.internalmatrix[rr,cc]=random.choice([madre.internalmatrix[rr,cc],padre.internalmatrix[rr,cc]])
+            else:
+              self.internalmatrix[rr,cc]=madre.internalmatrix[rr,cc]
+          else:
+            if padre.internalmatrix[rr,cc] != 0.0 :
+              self.internalmatrix[rr,cc]=padre.internalmatrix[rr,cc]
+      
+
+  def valuta(self,inputs):
+    vettore=np.array(inputs)
+    delta=self.dimensione-len(inputs)
+    vettore=np.hstack((vettore,np.array([0]*delta)))
+    for rr in range(0,self.iterazioni[self.tipoplayer]):
+      inputv=np.hstack((np.array(1),vettore))
+      vettore=np.tanh(np.dot(inputv,self.internalmatrix))
+    return vettore[self.front:self.finoa].tolist()
+
+  def radioterapy(self):   
+    righe=self.dimensione+1
+    daaggiungere=np.array([0.001]*righe)
+    daaggiungere=daaggiungere[:, np.newaxis]
+    self.internalmatrix=np.hstack([self.internalmatrix,daaggiungere])
+    self.dimensione=self.dimensione+1
+    
+  def getstoria(self):
+    return self.storia
+      
+  def getmatrix(self):
+    return self.internalmatrix.copy()
+      
+  def copyfrom(self,sorgente):
+    self.internalmatrix=sorgente.getmatrix()
+    self.dimensione=sorgente.dimensione
+    self.storia=sorgente.getstoria() + " => %s" % self.itsme    
+      
+  def runmutations(self,mute_rate,flip_rate):
+    for cc in range(0,self.iterazioni[self.tipoplayer]):
+      if (random.uniform(0.0,1.0) < mute_rate) :
+        riga=random.choice(range(0,self.dimensione+1))
+        colonna=random.choice(range(0,self.dimensione))
+        if self.internalmatrix[riga,colonna] != 0.0 :
+          self.internalmatrix[riga,colonna] =  self.internalmatrix[riga,colonna] * ( 9.0/10.0 + random.uniform(0.0,0.2))
+        else:
+          self.internalmatrix[riga,colonna] =  random.uniform(-0.5,0.5)
+      if (random.uniform(0.0,1.0) < flip_rate):        
+        riga=random.choice(range(0,self.dimensione+1))
+        colonna=random.choice(range(0,self.dimensione))
+        self.internalmatrix[riga,colonna] =  -1.0 * self.internalmatrix[riga,colonna] 
+
+###end of rico
+
+
 class EvoPlayer:
   def __init__(self,nome,front,lastline,tipoplayer='Standard'):
     self.front=front
@@ -643,10 +745,6 @@ class EvoPlayer:
             else:
               if madre.layers[aa][cc,dd] != 0.0 :
                 self.layers[aa][cc,dd]=madre.layers[aa][cc,dd]
-      
-        
-
-
 
 
   def valuta(self,inputs):
@@ -738,7 +836,7 @@ class Ecosystem:
       genum=self.getgeneration(sc)
       self.idnumber[genum]=self.idnumber[genum]+1
       self.createclone(sc,'g%df%d' % (genum,self.idnumber[genum]))
-      self.players['g%df%d' % (genum,self.idnumber[genum]))].runmutations(self.ratemutation[0],self.ratemutation[3])
+      self.players['g%df%d' % (genum,self.idnumber[genum])].runmutations(self.ratemutation[0],self.ratemutation[3])
 
   def runconnections(self,number):
     if (random.uniform(0.0,10.0) < self.ratemutation[5]):
@@ -775,6 +873,99 @@ class Ecosystem:
     else:
       self.liblogger.debug("no radioterapy "  )
     raise Exception("yet not implemented")
+       
+       
+  def nuovofiglio(self):
+    padre=random.choice(list(self.players.keys()))
+    madre=random.choice(list(self.players.keys()))
+    if padre != madre :
+      self.idnumber[self.generationnumber]=self.idnumber[self.generationnumber] + 1
+      figlio="g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber])
+      self.liblogger.debug("possibile figlio %s da %s e %s" % (figlio,padre,madre))
+      self.players[figlio]=EvoPlayer(self.front,self.lastline,self.tipo)
+      self.players[figlio].fromparents(self.players[padre],self.players[madre])
+      self.liblogger.info("creato figlio %s da %s e %s" % (figlio,padre,madre))
+       
+    
+  def dumponfile(self,filename):
+    raise Exception("dump yet not implemented")
+
+  def createsingleplayer(self,immagine):
+    raise Exception("yet not implemented")
+  
+
+
+class RicoEcosystem:
+  def __init__(self,front,lastline,tipoplayer='Standard'):
+    self.liblogger=logging.getLogger('refo')
+    self.front=front
+    self.lastline=lastline
+    self.players={}
+    self.tipo=tipoplayer
+    self.ratemutation=[0.3,0.3,0.01,0.01,0.1,0.1]
+    self.generationnumber=0
+    self.idnumber={}
+    self.idnumber[0]=0
+
+  def getgeneration(self,name):
+    val=re.search('g(.+)f.*',name)
+    return int(val[1])
+
+
+  def newgeneration(self):
+    self.generationnumber=self.generationnumber+1
+    self.idnumber[self.generationnumber]=0
+
+  def createplayers(self,number,midlayer,funzioni):
+    for nn in range(0,number):
+      self.idnumber[self.generationnumber]=self.idnumber[self.generationnumber]+1
+      nome="g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber])
+      self.players[nome]=RicoPlayer(nome,self.front,self.lastline,self.tipo)
+      self.players[nome].generate(midlayer)
+      self.liblogger.debug("creato Player g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber]))
+
+  def runmutations(self,number):
+    for cc in range(0,number):
+      sc=random.choice(list(self.players.keys()))
+      genum=self.getgeneration(sc)
+      self.idnumber[genum]=self.idnumber[genum]+1
+      self.createclone(sc,'g%df%d' % (genum,self.idnumber[genum]))
+      self.players['g%df%d' % (genum,self.idnumber[genum])].runmutations(self.ratemutation[0],self.ratemutation[3])
+
+  def runconnections(self,number):
+    if (random.uniform(0.0,10.0) < self.ratemutation[5]):
+      self.liblogger.warn("Nuovi layer non ancora implementato.. peccato")
+
+
+  def terminateplayer(self,id):
+    del self.players[id]
+
+  def popolazione(self):
+    return len(self.players.keys())
+
+  def getactiveplayers(self):
+    return self.players.keys()
+    
+  def getplayer(self,name):
+    return self.players[name]
+    
+  def createclone(self,fromid,toid):
+    self.players[toid]=RicoPlayer(toid,self.front,self.lastline,self.tipo)
+    self.players[toid].copyfrom(self.players[fromid])
+
+
+  def radioterapy(self,metrica):
+    if (random.uniform(0.0,1.0) < self.ratemutation[4]):
+      pmutato=random.choice(list(self.players.keys()))
+      genum=self.getgeneration(pmutato)
+      self.idnumber[genum]=self.idnumber[genum]+1
+      self.createclone(pmutato,'g%df%d' % (genum,self.idnumber[genum]))
+      mutato='g%df%d' % (genum,self.idnumber[genum])
+      self.liblogger.debug("Player %s figlio di %s" % (mutato,pmutato))
+      self.liblogger.warning("aggiunta neurone per %s " % mutato )
+      self.players[mutato].radioterapy()
+    else:
+      self.liblogger.debug("no radioterapy "  )
        
        
   def nuovofiglio(self):

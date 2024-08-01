@@ -86,7 +86,7 @@ class Autodromi:
 class FullGP:
   def __init__(self,parameters):
     self.liblogger=logging.getLogger('refo')
-    self.ecosistema=Ecosystem(18,2) 
+    self.ecosistema=RicoEcosystem(18,2) 
     self.parameters=parameters
     self.report=Reportistica(parameters['repname'])
     self.autodromi=Autodromi()
@@ -245,7 +245,7 @@ class FullGP:
 
   def garavera(self,partenti,autodromename):
     tempo=0
-    self.liblogger.debug(f"Partenza {"-".join(partenti)}" )
+    self.liblogger.debug(f"Partenza {'-'.join(partenti)}" )
     lunghezza=self.autodromi.lunghezza(autodromename)
     quanti=len(partenti)
     stato={}
@@ -315,7 +315,10 @@ class FullGP:
         if ( stato[rr][3] < 1 ) or (stato[rr][4] < 1 ) or (stato[rr][1] > 2 ):
           stato[rr][0]=False
           stato[rr][7]=1500 * stato[rr][1] + 10 * stato[rr][2] - tempo
-          self.liblogger.debug(f"{rr} is out at {tempo} con benzina {stato[rr][3]} , gomme {stato[rr][4]} e giri {stato[rr][1]}")
+          if ( stato[rr][1] < 3 ):
+            self.liblogger.debug(f"{rr} is out at {tempo} con benzina {stato[rr][3]} , gomme {stato[rr][4]} e giri {stato[rr][1]}")
+          else:
+            self.liblogger.debug(f"WOW {rr} completed at {tempo} con benzina {stato[rr][3]} , gomme {stato[rr][4]} e giri {stato[rr][1]}")            
           if stato[rr][1] > 2 :
             self.autodromi.checkrecord(autodromename,rr,tempo)
         else :
