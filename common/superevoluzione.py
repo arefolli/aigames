@@ -652,6 +652,10 @@ class RicoPlayer:
       
   def getmatrix(self):
     return self.internalmatrix.copy()
+
+  def setmatrix(self,inmatrix):
+    self.internalmatrix=inmatrix.copy()
+
       
   def copyfrom(self,sorgente):
     self.internalmatrix=sorgente.getmatrix()
@@ -671,6 +675,24 @@ class RicoPlayer:
         riga=random.choice(range(0,self.dimensione+1))
         colonna=random.choice(range(0,self.dimensione))
         self.internalmatrix[riga,colonna] =  -1.0 * self.internalmatrix[riga,colonna] 
+
+  def upperconnection(self):
+    riga=random.choice(range(0,self.dimensione+1))
+    colonna=random.choice(range(0,self.dimensione))
+    if self.internalmatrix[riga,colonna] != 0.0 :
+      if ((self.internalmatrix[riga,colonna] < 1.0) or (self.internalmatrix[riga,colonna] > -1.0)) :
+        self.internalmatrix[riga,colonna]=self.internalmatrix[riga,colonna]*10.0
+      else:
+        self.internalmatrix[riga,colonna]=self.internalmatrix[riga,colonna]*2.5
+    else:
+      self.internalmatrix[riga,colonna] =  random.uniform(-1.5,1.5)
+
+  def copy(self):
+    toret={}
+    toret['base']=[self.itsme,self.front,self.lastline,self.tipoplayer,self.storia]
+    toret['matrix']=self.internalmatrix
+    return toret.copy()
+
 
 ###end of rico
 
@@ -935,9 +957,11 @@ class RicoEcosystem:
       self.players['g%df%d' % (genum,self.idnumber[genum])].runmutations(self.ratemutation[0],self.ratemutation[3])
 
   def runconnections(self,number):
-    if (random.uniform(0.0,10.0) < self.ratemutation[5]):
-      self.liblogger.warn("Nuovi layer non ancora implementato.. peccato")
-
+    for cc in range(0,number):
+      if (random.uniform(0.0,1.0) < self.ratemutation[5]):
+        #self.idnumber=self.idnumber+1
+        mutando=random.choice(list(self.players.keys()))
+        sel.players[mutando].upperconnection()
 
   def terminateplayer(self,id):
     del self.players[id]
@@ -977,13 +1001,30 @@ class RicoEcosystem:
       self.idnumber[self.generationnumber]=self.idnumber[self.generationnumber] + 1
       figlio="g%df%d" % (self.generationnumber,self.idnumber[self.generationnumber])
       self.liblogger.debug("possibile figlio %s da %s e %s" % (figlio,padre,madre))
-      self.players[figlio]=EvoPlayer(self.front,self.lastline,self.tipo)
+      self.players[figlio]=RicoPlayer(figlio,self.front,self.lastline,self.tipo)
       self.players[figlio].fromparents(self.players[padre],self.players[madre])
       self.liblogger.info("creato figlio %s da %s e %s" % (figlio,padre,madre))
        
     
   def dumponfile(self,filename):
-    raise Exception("dump yet not implemented")
+    fdump=open(filename,'w')
+    for rr in self.players.keys():
+      fdump.write("%s\n" % self.players[rr].copy() )
+    fdump.close()
+
+  def loadplayers(self,filename):
+    self.idnumber[0]=0
+    fdump=open(filename,'r')
+    for cc in fdump.readlines():
+      immagine=eval(cc)
+      self.idnumber[0]=self.idnumber[0]+1
+      idplayer="g0f%d" % (self.idnumber[0])
+      self.players[idplayer]=RicoPlayer(idplayer,immagine['base'][1],immagine['base'][2],immagine['base'][3])
+      self.players[idplayer].setmatrix(immagine['matrix'])
+      self.liblogger.debug("creato Player %s" % idplayer )            
+
+
+
 
   def createsingleplayer(self,immagine):
     raise Exception("yet not implemented")
