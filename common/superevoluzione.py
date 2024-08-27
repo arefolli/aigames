@@ -656,6 +656,8 @@ class RicoPlayer:
   def setmatrix(self,inmatrix):
     self.internalmatrix=inmatrix.copy()
 
+  def setdimensione(self,dim):
+    self.dimensione=dim
       
   def copyfrom(self,sorgente):
     self.internalmatrix=sorgente.getmatrix()
@@ -689,8 +691,8 @@ class RicoPlayer:
 
   def copy(self):
     toret={}
-    toret['base']=[self.itsme,self.front,self.lastline,self.tipoplayer,self.storia]
-    toret['matrix']=self.internalmatrix
+    toret['base']=[self.itsme,self.front,self.lastline,self.tipoplayer,self.storia,self.dimensione]
+    #toret['matrix']=self.internalmatrix
     return toret.copy()
 
 
@@ -1026,6 +1028,7 @@ class RicoEcosystem:
       idplayer="g0f%d" % (self.idnumber[0])
       mapping[idplayer]=immagine['base'][0]
       self.players[idplayer]=RicoPlayer(idplayer,immagine['base'][1],immagine['base'][2],immagine['base'][3])
+      self.players[idplayer].setdimensione(immagine['base'][4])
       self.liblogger.debug("creato Player %s" % idplayer )
     dfile='dati_' + filename + '.npz'
     oldmatrix=np.load(dfile)
