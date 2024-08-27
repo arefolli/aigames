@@ -69,7 +69,7 @@ class Autodromi:
 class SimpleGP:
   def __init__(self,parameters):
     self.liblogger=logging.getLogger('refo')
-    self.ecosistema=Ecosystem(11,2)
+    self.ecosistema=RicoEcosystem(11,2)
     self.parameters=parameters
     self.report=Reportistica(parameters['repname'])
     self.autodromi=Autodromi()
@@ -125,7 +125,7 @@ class SimpleGP:
       self.ecosistema.newgeneration()
       for rr in range(self.parameters['sonnumber']):
         self.ecosistema.nuovofiglio()
-    actualval=self.campionato(self.parameters['gare'])
+    actualval=self.campionato()
     for nn in punteggio.keys():
       punteggio[nn]= 0.6 * punteggio[nn]
     punti = 0.0

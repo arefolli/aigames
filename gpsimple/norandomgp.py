@@ -160,7 +160,7 @@ class FullGP:
       self.ecosistema.newgeneration()
       for rr in range(self.parameters['sonnumber']):
         self.ecosistema.nuovofiglio()
-    actualval=self.campionato(self.parameters['gare'])
+    actualval=self.campionato()
     for nn in punteggio.keys():
       punteggio[nn]= 0.6 * punteggio[nn]
     punti = 0.0

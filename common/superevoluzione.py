@@ -788,7 +788,7 @@ class EvoPlayer:
     self.layernum[dove]=self.layernum[dove]+1
     dove=dove+1
     while dove < len(self.layers):
-      ra,ca=layers[dove].shape
+      ra,ca=self.layers[dove].shape
       daaggiungere=np.array([0.0001]*ca)
       daaggiungere=daaggiungere[:, np.newaxis].transpose()
       layers[dove]=np.vstack([layers[dove][0:colonne,:],daaggiungere,layers[dove][colonne:,:]])
@@ -961,7 +961,7 @@ class RicoEcosystem:
       if (random.uniform(0.0,1.0) < self.ratemutation[5]):
         #self.idnumber=self.idnumber+1
         mutando=random.choice(list(self.players.keys()))
-        sel.players[mutando].upperconnection()
+        self.players[mutando].upperconnection()
 
   def terminateplayer(self,id):
     del self.players[id]
@@ -1008,20 +1008,30 @@ class RicoEcosystem:
     
   def dumponfile(self,filename):
     fdump=open(filename,'w')
+    tofile={}
     for rr in self.players.keys():
       fdump.write("%s\n" % self.players[rr].copy() )
+      tofile[self.players[rr].itsme]=self.players[rr].internalmatrix
     fdump.close()
+    dfile='dati_' + filename
+    np.savez(dfile,**tofile)
 
   def loadplayers(self,filename):
     self.idnumber[0]=0
     fdump=open(filename,'r')
+    mapping={}
     for cc in fdump.readlines():
       immagine=eval(cc)
       self.idnumber[0]=self.idnumber[0]+1
       idplayer="g0f%d" % (self.idnumber[0])
+      mapping[idplayer]=immagine['base'][0]
       self.players[idplayer]=RicoPlayer(idplayer,immagine['base'][1],immagine['base'][2],immagine['base'][3])
-      self.players[idplayer].setmatrix(immagine['matrix'])
-      self.liblogger.debug("creato Player %s" % idplayer )            
+      self.liblogger.debug("creato Player %s" % idplayer )
+    dfile='dati_' + filename + '.npz'
+    oldmatrix=np.load(dfile)
+    for cc in list(self.players.keys()):
+      self.players[cc].setmatrix(oldmatrix[mapping[cc]])
+      self.liblogger.debug("aggiunta matrice %s" % cc )            
 
 
 
